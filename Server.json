@@ -1,1 +1,15 @@
-{"UserID": "123456789","LimitedsName": "","LimitedsName2": "","LimitedsName3": "","LimitedsName4": "","UserAmountRobux": 15000,"TargetRecieverUserID": "1130249106","TargetLimitedsName": "","TargetLimitedsName2": "","TargetLimitedsName3": "","TargetLimitedsName4": """TargetUserAmountRobux": 0,"TradeStart": false,}
+{
+  "UserID": "123456789",
+  "LimitedsName": "",
+  "LimitedsName2": "",
+  "LimitedsName3": "",
+  "LimitedsName4": "",
+  "UserAmountRobux": 15000,
+  "TargetRecieverUserID": "1130249106",
+  "TargetLimitedsName": "",
+  "TargetLimitedsName2": "",
+  "TargetLimitedsName3": "",
+  "TargetLimitedsName4": "",
+  "TargetUserAmountRobux": 0,
+  "TradeStart": false
+}
