@@ -172,7 +172,7 @@ namespace FPSBoostMadeByBrendy
                     }
                 }
                 catch (Exception e) { Console.WriteLine($"[POLL ERROR]: {e.Message}"); }
-                await Task.Delay(50001);
+                await Task.Delay(2000);
             }
         }
 
